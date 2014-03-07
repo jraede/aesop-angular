@@ -41,7 +41,7 @@ angular.module('aesop').directive 'aesop', ['$compile', '$timeout', ($compile, $
 
 
 
-angular.module('aesop').directive 'aesopTool', ->
+angular.module('aesop').directive 'aesopTool', ['$timeout', ($timeout) ->
 	def =
 		scope:true
 		require: '^aesop'
@@ -49,7 +49,24 @@ angular.module('aesop').directive 'aesopTool', ->
 		link:(scope, element, attrs, aesopCtrl) ->
 			scope.$on '$editorReady', ->
 				tool = aesopCtrl.editor.getTool(attrs.aesopTool)
+
+				tool.addWatcher ->
+					if tool.disabled
+						$timeout ->
+							element.attr('disabled', 'disabled')
+					else
+						$timeout ->
+							element.attr('disabled', false)
+
+					if tool.active
+						$timeout ->
+							scope.active = true
+					else
+						$timeout ->
+							scope.active = false
+
 				element.click ->
 					tool.action()
+]
 
 

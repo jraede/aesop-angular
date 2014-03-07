@@ -599,26 +599,47 @@
           this.type = params.type;
         }
         this.buttonContent = params.buttonContent;
+        this.$$watchers = [];
         this.button = $('<button/>').attr('class', window.Aesop.config.toolbar.buttonClass).html(this.buttonContent).click(this.action);
       }
 
+      Tool.prototype.addWatcher = function(watcher) {
+        return this.$$watchers.push(watcher);
+      };
+
       Tool.prototype.setActive = function(active) {
+        var w, _i, _len, _ref, _results;
         this.active = active;
         if (active) {
-          return this.button.addClass(window.Aesop.config.toolbar.buttonActiveClass);
+          this.button.addClass(window.Aesop.config.toolbar.buttonActiveClass);
         } else {
-          return this.button.removeClass(window.Aesop.config.toolbar.buttonActiveClass);
+          this.button.removeClass(window.Aesop.config.toolbar.buttonActiveClass);
         }
+        _ref = this.$$watchers;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          w = _ref[_i];
+          _results.push(w());
+        }
+        return _results;
       };
 
       Tool.prototype.setDisabled = function(disabled) {
+        var w, _i, _len, _ref, _results;
         this.disabled = disabled;
         if (disabled) {
           this.setActive(false);
-          return this.button.attr('disabled', 'disabled');
+          this.button.attr('disabled', 'disabled');
         } else {
-          return this.button.attr('disabled', false);
+          this.button.attr('disabled', false);
         }
+        _ref = this.$$watchers;
+        _results = [];
+        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+          w = _ref[_i];
+          _results.push(w());
+        }
+        return _results;
       };
 
       return Tool;
