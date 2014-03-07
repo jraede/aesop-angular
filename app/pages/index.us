@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html ng-app="app">
+  <head>
+    <title><%= pkg.name %></title>
+
+    <link rel="stylesheet" type="text/css" href="<%= css %>" media="all" />
+     <script type="text/javascript" src="<%= js %>"></script>
+    <script type="text/javascript">
+    angular.module('app', ['aesop']);
+
+    function TestCtrl($scope) {
+    	$scope.tools=['bold','underline','h1','p', 'ul', 'ol', 'html']
+    	$scope.data = {start:''}
+    }
+    </script>
+  </head>
+  <body ng-controller="TestCtrl">
+   
+	<pre>{{data.start}}</pre>
+    <div aesop tools="tools" ng-model="data.start">
+    	<button aesop-tool="bold">Bold</button>
+    	<button aesop-tool="p">p</button>
+    	<button aesop-tool="h1">h1</button>
+    	<button aesop-tool="ul">ul</button>
+    	<button aesop-tool="ol">ol</button>
+    	<button aesop-tool="html">html</button>
+    </div>
+  </body>
+</html>
