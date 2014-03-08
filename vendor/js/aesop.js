@@ -56,12 +56,22 @@
         }
       }
 
+      Editor.prototype.destroy = function() {
+        return this.iframe.remove();
+      };
+
       Editor.prototype.blockTags = ['P', 'H1', 'H2', 'H3', 'H4', 'H5', 'H6', 'PRE', 'BLOCKQUOTE'];
 
       /*
           PUBLIC API
       */
 
+
+      Editor.prototype.addStylesheet = function(url) {
+        var link;
+        link = $('<link/>').attr('rel', 'stylesheet').attr('type', 'text/css').attr('href', url);
+        return this.document.find('head').append(link);
+      };
 
       Editor.prototype.addWatcher = function(watcher) {
         return this.$$watchers.push(watcher);
@@ -215,13 +225,8 @@
       };
 
       Editor.prototype.$$updateWatchers = function() {
-        var css, el, name, p, parentTags, parents, prop, tagName, tool, vals, w, watcher, _i, _j, _k, _l, _len, _len1, _len2, _len3, _ref, _ref1, _ref2, _ref3;
+        var allStyleWatchers, contents, css, el, matched, p, parentTags, parents, prop, tagName, vals, w, watcher, _i, _j, _k, _l, _len, _len1, _len2, _len3, _len4, _m, _ref, _ref1, _ref2;
         el = this.$getCurrentElement();
-        _ref = this.$$tools;
-        for (name in _ref) {
-          tool = _ref[name];
-          tool.setActive(false);
-        }
         tagName = el[0].tagName;
         this.$$updateTagWatchers(tagName, 'non');
         parents = el.parents();
@@ -236,28 +241,41 @@
           tagName = parentTags[_j];
           this.$$updateTagWatchers(tagName, 'propagated');
         }
-        _ref1 = this.$$styleWatchers;
-        for (prop in _ref1) {
-          vals = _ref1[prop];
+        allStyleWatchers = this.$$allStyleWatchers;
+        matched = [];
+        _ref = this.$$styleWatchers;
+        for (prop in _ref) {
+          vals = _ref[prop];
           css = el.css(prop);
           if (!css) {
             continue;
           }
           css = css.toString().split(' ')[0];
           if (vals[css] != null) {
-            _ref2 = vals[css];
-            for (_k = 0, _len2 = _ref2.length; _k < _len2; _k++) {
-              w = _ref2[_k];
+            _ref1 = vals[css];
+            for (_k = 0, _len2 = _ref1.length; _k < _len2; _k++) {
+              w = _ref1[_k];
+              matched.push(w);
               w.setActive(true);
             }
           }
         }
-        _ref3 = this.$$watchers;
-        for (_l = 0, _len3 = _ref3.length; _l < _len3; _l++) {
-          watcher = _ref3[_l];
+        for (_l = 0, _len3 = allStyleWatchers.length; _l < _len3; _l++) {
+          w = allStyleWatchers[_l];
+          if (matched.indexOf(w) < 0) {
+            w.setActive(false);
+          }
+        }
+        _ref2 = this.$$watchers;
+        for (_m = 0, _len4 = _ref2.length; _m < _len4; _m++) {
+          watcher = _ref2[_m];
           watcher();
         }
-        return this.element.html(window.html_beautify(this.getContents()));
+        contents = this.getContents();
+        if (window.html_beautify != null) {
+          contents = window.html_beautify(contents);
+        }
+        return this.element.html(contents);
       };
 
       Editor.prototype.$$setCaretToNode = function(node) {
@@ -334,11 +352,16 @@
 
 
       Editor.prototype.$execCommand = function(command, defaultUI, arg) {
+        var el;
         if (defaultUI == null) {
           defaultUI = false;
         }
         if (arg == null) {
           arg = null;
+        }
+        el = this.$getCurrentElement(false);
+        if (!el) {
+          return false;
         }
         this.document[0].execCommand(command, defaultUI, arg);
         console.log('Ensuring paragraph');
@@ -363,7 +386,10 @@
 
       Editor.prototype.$insertBlock = function(blockType) {
         var caretNode, contents, el, mode, p, parents, prevParent, replacement, tag, _i, _j, _len, _len1, _ref;
-        el = this.$getCurrentElement();
+        el = this.$getCurrentElement(false);
+        if (!el) {
+          return false;
+        }
         tag = el[0].tagName;
         console.log('Inserting block:', blockType, tag);
         replacement = $('<' + blockType + '/>');
@@ -442,9 +468,11 @@
       */
 
 
-      Editor.prototype.$getCurrentElement = function() {
+      Editor.prototype.$getCurrentElement = function(returnBodyOnNull) {
         var sel;
-        $(this.document).focus();
+        if (returnBodyOnNull == null) {
+          returnBodyOnNull = true;
+        }
         sel = this.$getSelection();
         if (sel.anchorNode) {
           if (sel.anchorNode.nodeType === 3) {
@@ -452,7 +480,10 @@
           }
           return $(sel.anchorNode);
         } else {
-          return this.document.find('body');
+          if (returnBodyOnNull) {
+            return this.document.find('body');
+          }
+          return false;
         }
       };
 
@@ -521,8 +552,19 @@
         return this.document.find('body').html(val);
       };
 
+      Editor.prototype.$$lastEnsureParagraphContents = '';
+
       Editor.prototype.$$ensureParagraphWrapper = function(evt) {
-        if (!this.getContents() || this.$getCurrentElement()[0].tagName === 'BODY') {
+        if (this.getContents() && this.getContents() === this.$$lastEnsureParagraphContents) {
+          return;
+        }
+        if (this.getContents() === '<p></p>' || this.getContents() === '<p><br/></p>') {
+          return;
+        }
+        console.log('Ensuring paragraph wrapper with contents:', this.getContents());
+        this.$$lastEnsureParagraphContents = this.getContents();
+        if (!this.getContents() || (this.$getCurrentElement()[0].tagName === 'BODY' && !this.$getCurrentElement().find('p').length)) {
+          console.log('First conditional');
           return this.$insertBlock('P');
         } else if (this.$getCurrentElement()[0].tagName === 'DIV' || !this.$getCurrentBlock()) {
           return this.$insertBlock('P');
@@ -944,6 +986,9 @@
     type: 'list',
     buttonContent: 'ol',
     action: function() {
+      if (this.active) {
+        this.setActive(false);
+      }
       return this.editor.$execCommand('insertOrderedList');
     }
   });
@@ -959,6 +1004,9 @@
     type: 'list',
     buttonContent: 'ul',
     action: function() {
+      if (this.active) {
+        this.setActive(false);
+      }
       return this.editor.$execCommand('insertUnorderedList');
     }
   });

@@ -22,6 +22,7 @@ angular.module('aesop').directive 'aesop', ['$compile', '$timeout', ($compile, $
 
 			element.append(el)
 			scope.element = el
+			scope.stylesheet = attrs.stylesheet
 			scope.$initialize()
 
 
@@ -34,7 +35,19 @@ angular.module('aesop').directive 'aesop', ['$compile', '$timeout', ($compile, $
 				@editor.addWatcher =>
 					$timeout =>
 						$scope.ngModel = @editor.getContents()
+				$scope.$watch 'ngModel', (newVal, oldVal) ->
+					if @editor.getContents() isnt newVal
+						@editor.document.find('body').html(newVal)
+
+				if $scope.stylesheet 
+					@editor.addStylesheet($scope.stylesheet)
+				
 				$rootScope.$broadcast('$editorReady')
+
+
+				$scope.$on '$destroy', =>
+					@editor.destroy()
+					@editor = null
 			return
 		]
 ]
@@ -50,6 +63,7 @@ angular.module('aesop').directive 'aesopTool', ['$timeout', ($timeout) ->
 			scope.$on '$editorReady', ->
 				tool = aesopCtrl.editor.getTool(attrs.aesopTool)
 
+				scope.active = false
 				tool.addWatcher ->
 					if tool.disabled
 						$timeout ->

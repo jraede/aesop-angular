@@ -14,6 +14,8 @@ module.exports = require(process.env['LINEMAN_MAIN']).config.extend 'files',
 			"vendor/js/aesop.js"
 
 		]
+		minified: "dist/js/aesop-angular.min.js"
+		minifiedWebRelative: "js/aesop-angular.min.js"
 
 
 	# concat:
